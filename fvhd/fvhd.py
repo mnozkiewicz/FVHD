@@ -25,6 +25,7 @@ class FVHD:
         velocity_limit=False,
         verbose=True,
         mutual_neighbors_epochs: Optional[int] = None,
+        seed: Optional[int] = None
     ) -> None:
         self.n_components = n_components
         self.nn = nn
@@ -40,6 +41,8 @@ class FVHD:
         self.verbose = verbose
         self.graph_file = graph_file
         self._current_epoch = 0
+        self.seed = seed
+        self.external_rn_indices: Optional[torch.Tensor] = None
 
         self.autoadapt = autoadapt
         self.buffer_len = 10
@@ -58,7 +61,13 @@ class FVHD:
         nn = torch.tensor(graph.indexes[:, : self.nn].astype(np.int32))
         nn = nn.to(self.device)
         n = x.shape[0]
-        rn = torch.randint(0, n, (n, self.rn)).to(self.device)
+
+        self.set_seed()
+        if self.external_rn_indices is not None:
+            rn = self.external_rn_indices.to(self.device)
+        else:
+            rn = torch.randint(0, n, (n, self.rn)).to(self.device)
+
         nn = nn.reshape(-1)
         rn = rn.reshape(-1)
 
@@ -127,6 +136,19 @@ class FVHD:
                 print(f"\r{i} loss: {loss.item()}")
 
         return self.x[:, 0].cpu().numpy()
+
+
+    def set_external_random_neighbors(self, rn_indices: torch.Tensor) -> None:
+        """
+        Allows overriding the default random neighbor selection.
+        rn_indices should be of shape [N, rn], dtype torch.long.
+        """
+        self.external_rn_indices = rn_indices
+
+
+    def set_seed(self):
+        if self.seed is not None:
+            torch.manual_seed(self.seed)
 
     def __force_directed_step(self, NN, RN, NN_new, RN_new, graphs):
         if self.mutual_neighbors_epochs and self.epochs - self._current_epoch <= self.mutual_neighbors_epochs:
