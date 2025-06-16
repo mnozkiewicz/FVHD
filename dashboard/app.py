@@ -30,6 +30,9 @@ dataset = st.sidebar.selectbox("Dataset", DATASETS)
 
 update_plot = st.sidebar.button("Show plot")
 
+if "plots" not in st.session_state:
+    st.session_state.plots = []
+
 
 @st.cache_data()
 def load_data(dataset_id: str) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -72,7 +75,7 @@ def fit_fvhd_embedding(
     return embeddings
 
 
-def main():
+def plot():
 
     X, y = load_data(dataset)
     X = X[:num_points]
@@ -112,7 +115,6 @@ def main():
         marker=dict(
             size=marker_size,
             color=colors,
-            # line=dict(width=1, color='black')
         ),
         text=[f"Point {i} - {label}" for i, label in enumerate(y)],
         hoverinfo="text",
@@ -124,9 +126,7 @@ def main():
         edge_y = []
 
         for i in range(num_points):
-            for j in graphs[0].indexes[i][
-                1:
-            ]:  # skip self (first neighbor is the point itself)
+            for j in graphs[0].indexes[i][1:]:
                 edge_x += [X_embedded[i, 0], X_embedded[j, 0], None]
                 edge_y += [X_embedded[i, 1], X_embedded[j, 1], None]
 
@@ -144,15 +144,27 @@ def main():
         fig = go.Figure(data=[node_trace])
 
     fig.update_layout(
-        title="2D Node Scatter",
+        title=f"Dataset: {dataset}, Algorithm: {embedding_algo}",
         xaxis=dict(showgrid=False, zeroline=False),
         yaxis=dict(showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=40, b=20),
         hovermode="closest",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.session_state.plots.append(fig)
+
 
 
 if update_plot:
-    main()
+    plot()
+
+for i, fig in enumerate(st.session_state.plots):
+    col1, col2 = st.columns([0.9, 0.1])
+
+    with col1:
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col2:
+        if st.button("X", key=f"del-{i}"):
+            st.session_state.plots.pop(i)
+            st.rerun()
