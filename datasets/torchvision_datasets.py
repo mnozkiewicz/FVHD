@@ -1,5 +1,6 @@
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+from functools import partial
 
 from typing import Type, Tuple, Optional
 import torch
@@ -9,7 +10,8 @@ from torchvision.datasets import (
     FashionMNIST,
     QMNIST,
     KMNIST,
-    VisionDataset
+    VisionDataset,
+    EMNIST
 )
 
 def load_split(
@@ -46,6 +48,14 @@ def get_dataset_class(dataset_name: str) -> Type[VisionDataset]:
             return QMNIST
         case "kmnist":
             return KMNIST
+        case "emnist_letters":
+            return partial(EMNIST, split="letters")
+        case "emnist_byclass":
+            return partial(EMNIST, split="byclass")
+        case "emnist_bymerge":
+            return partial(EMNIST, split="bymerge")
+        case "emnist_balanced":
+            return partial(EMNIST, split="balanced")
         case _:
             raise ValueError(f"No dataset named {dataset_name}")
 
